@@ -2,23 +2,24 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
+	"github.com/iceskel/lastfm"
 	"github.com/thoj/go-ircevent"
 	"io/ioutil"
 	"log"
 	"math/rand"
 	"strconv"
 	"time"
-	"flag"
-	"github.com/iceskel/lastfm"
 )
 
 type Configuration struct {
-	Channels     []string
-	Botname      string
-	Aouth        string
-	LastfmKey    string
-	LastfmSecret string
-	LastfmUser	 string
+	Channel			string
+	Botname			string
+	Aouth			string
+	LastfmKey		string
+	LastfmSecret	string
+	LastfmUser		string
+	RepeatMsg		string
 }
 
 var (
@@ -44,12 +45,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	for _, channel := range config.Channels {
-		JoinChannel(channel, con)
-	}
+	JoinChannel(config.Channel, con)
 	con.Loop()
 }
-
 
 func JoinChannel(channel string, con *irc.Connection) {
 	con.AddCallback("001", func(e *irc.Event) {
@@ -57,6 +55,7 @@ func JoinChannel(channel string, con *irc.Connection) {
 		log.Print("Joined " + channel + " \n")
 		RollCommand(channel, con)
 		SongCommand(channel, con)
+		RepeatMessenger(channel, con)
 	})
 }
 
@@ -97,4 +96,12 @@ func SongCommand(channel string, con *irc.Connection) {
 			}
 		}
 	})
+}
+
+func RepeatMessenger(channel string, con *irc.Connection) {
+	ticker := time.NewTicker(time.Minute * 5)
+	for {
+		<-ticker.C
+		con.Privmsg(channel, config.RepeatMsg)
+	}
 }
