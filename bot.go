@@ -56,7 +56,7 @@ func JoinChannel(channel string, con *irc.Connection) {
 		con.Join(channel)
 		log.Print("Joined " + channel + " \n")
 		RollCommand(channel, con)
-		LastfmCommand(channel, con)
+		SongCommand(channel, con)
 	})
 }
 
