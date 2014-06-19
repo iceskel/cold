@@ -9,18 +9,19 @@ format should be as follows
 
 ```
 {
-	"Channels": ["#foo"],
+	"Channel": "#foo",
 	"Botname": "robit",
 	"Aouth": "oauth:32433asd3easd3easdas2",
 	"LastfmKey": "aq3asdasd213asdasdad",
 	"LastfmSecret": "asdas3zsdcz23rzdf",
-	"LastfmUser": "bar"
+	"LastfmUser": "bar",
+	"RepeatMsg": "Don't forget to follow <twitter>, <facebook> etc"
 }
 ```
-## Commands
+## Commands/Features
 - !song gets the current or last played track of the lastfm user specified in the config file
 - !roll rolls a random number the size of the int
-
+- Displays a message every 5 mins to the channel
 
 more to come later
 
