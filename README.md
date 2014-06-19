@@ -18,8 +18,8 @@ format should be as follows
 }
 ```
 ## Commands
-!song gets the current or last played track of the lastfm user specified in the config file
-!roll rolls a random number the size of the int
+- !song gets the current or last played track of the lastfm user specified in the config file
+- !roll rolls a random number the size of the int
 
 ## Requirements
 You will need to first register a twitch account and input that username into the ``Botname``
