@@ -133,3 +133,11 @@ func SongCommand(channel string, con *irc.Connection) {
 		}
 	})
 }
+
+func RepeatMessenger(channel string, con *irc.Connection) {
+	ticker := time.NewTicker(time.Minute * 5)
+	for {
+		<-ticker.C
+		con.Privmsg(channel, config.RepeatMsg)
+	}
+}
