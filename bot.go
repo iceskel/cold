@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-type Configuration struct {
+type configuration struct {
 	Channel               string
 	Botname               string
 	Aouth                 string
@@ -28,8 +28,9 @@ type Configuration struct {
 }
 
 var (
-	config Configuration
+	config configuration
 	tweet  *anaconda.TwitterApi
+	fm     *lastfm.Lastfm
 )
 
 func main() {
@@ -48,6 +49,7 @@ func main() {
 	anaconda.SetConsumerKey(config.TwitterConsumerKey)
 	anaconda.SetConsumerSecret(config.TwitterConsumerSecret)
 	tweet = anaconda.NewTwitterApi(config.TwitterAccessToken, config.TwitterAccessSecret)
+	fm = lastfm.NewLastfm(config.LastfmUser, config.LastfmKey)
 
 	con := irc.IRC(config.Botname, config.Botname)
 	con.Password = config.Aouth
@@ -55,22 +57,22 @@ func main() {
 		log.Fatal(err)
 	}
 
-	JoinChannel(config.Channel, con)
+	joinChannel(config.Channel, con)
 	con.Loop()
 }
 
-func JoinChannel(channel string, con *irc.Connection) {
+func joinChannel(channel string, con *irc.Connection) {
 	con.AddCallback("001", func(e *irc.Event) {
 		con.Join(channel)
 		log.Print("Joined " + channel + " \n")
-		RollCommand(channel, con)
-		SongCommand(channel, con)
-		TweetCommand(channel, con)
-		RepeatMessenger(channel, con)
+		rollCommand(channel, con)
+		songCommand(channel, con)
+		tweetCommand(channel, con)
+		repeatMessenger(channel, con)
 	})
 }
 
-func RepeatMessenger(channel string, con *irc.Connection) {
+func repeatMessenger(channel string, con *irc.Connection) {
 	ticker := time.NewTicker(time.Minute * 5)
 	for {
 		<-ticker.C
@@ -78,7 +80,7 @@ func RepeatMessenger(channel string, con *irc.Connection) {
 	}
 }
 
-func TweetCommand(channel string, con *irc.Connection) {
+func tweetCommand(channel string, con *irc.Connection) {
 	delay := time.Now()
 	con.AddCallback("PRIVMSG", func(e *irc.Event) {
 		if e.Arguments[0] == channel {
@@ -95,7 +97,7 @@ func TweetCommand(channel string, con *irc.Connection) {
 	})
 }
 
-func RollCommand(channel string, con *irc.Connection) {
+func rollCommand(channel string, con *irc.Connection) {
 	delay := time.Now()
 	con.AddCallback("PRIVMSG", func(e *irc.Event) {
 		if e.Arguments[0] == channel {
@@ -113,13 +115,12 @@ func RollCommand(channel string, con *irc.Connection) {
 	})
 }
 
-func SongCommand(channel string, con *irc.Connection) {
+func songCommand(channel string, con *irc.Connection) {
 	delay := time.Now()
 	con.AddCallback("PRIVMSG", func(e *irc.Event) {
 		if e.Arguments[0] == channel {
 			if len(e.Message()) == 5 && time.Since(delay).Seconds() > 10 {
 				if e.Message()[0:5] == "!song" {
-					fm := lastfm.NewLastfm(config.LastfmUser, config.LastfmKey)
 					artist, trackName := fm.GetCurrentArtistAndTrackName()
 					if fm.IsNowPlaying() {
 						con.Privmsg(channel, artist+" - "+trackName)
