@@ -38,6 +38,9 @@ For the !song command, a last.fm api account is required. Get it here http://www
 Then input the Key and Secret into the config file and the User profile name you want to get
 the information from.
 
+For the !tweet command, a twitter dev account is required (use your regular twitter login). Further instructions are here http://dev.twitter.com/
+Then after creating the application, get the api keys. 
+
 ## Installing
-Just `go get github.com/iceskel/gobot` and cd to the directory and `go build bot.go`
-next run it `./bot -c configfile.json`. 
+Just `go get github.com/iceskel/cold` and cd to the directory and `go build cold.go`
+next run it `./cold -c configfile.json`. 
