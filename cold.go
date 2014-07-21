@@ -50,7 +50,10 @@ func main() {
 	anaconda.SetConsumerKey(config.TwitterConsumerKey)
 	anaconda.SetConsumerSecret(config.TwitterConsumerSecret)
 	tweet = anaconda.NewTwitterApi(config.TwitterAccessToken, config.TwitterAccessSecret)
-	fm = lastfm.NewLastfm(config.LastfmUser, config.LastfmKey)
+	fm, err = lastfm.NewLastfm(config.LastfmUser, config.LastfmKey)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	con := irc.IRC(config.Botname, config.Botname)
 	con.Password = config.Aouth
@@ -87,34 +90,36 @@ func repeatMessenger(channel string, con *irc.Connection) {
 func tweetCommand(channel string, con *irc.Connection) {
 	delay := time.Now()
 	con.AddCallback("PRIVMSG", func(e *irc.Event) {
-		if e.Arguments[0] == channel {
-			if len(e.Message()) == 6 && time.Since(delay).Seconds() > 10 {
-				if e.Message()[0:6] == "!tweet" {
-					thetweet, err := tweet.GetUserTimeline(nil)
-					if err != nil {
-						log.Fatal(err)
-					}
-					con.Privmsg(channel, thetweet[0].CreatedAt+": \""+thetweet[0].Text+"\"")
-				}
-			}
+		if !(len(e.Message()) == 6 && time.Since(delay).Seconds() > 10) {
+			return
 		}
+		if e.Message()[0:6] != "!tweet" {
+			return
+		}
+
+		thetweet, err := tweet.GetUserTimeline(nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+		con.Privmsg(channel, thetweet[0].CreatedAt+": \""+thetweet[0].Text+"\"")
 	})
 }
 
 func rollCommand(channel string, con *irc.Connection) {
 	delay := time.Now()
 	con.AddCallback("PRIVMSG", func(e *irc.Event) {
-		if e.Arguments[0] == channel {
-			if len(e.Message()) >= 5 && time.Since(delay).Seconds() > 10 {
-				if e.Message()[0:5] == "!roll" {
-					num, err := strconv.Atoi(string(e.Message()[6:]))
-					if err == nil && num >= 1 {
-						randNum := strconv.Itoa(rand.Intn(num))
-						con.Privmsg(channel, e.Nick+" rolled "+randNum+"!")
-						delay = time.Now()
-					}
-				}
-			}
+		if !(len(e.Message()) >= 5 && time.Since(delay).Seconds() > 10) {
+			return
+		}
+		if e.Message()[0:5] != "!roll" {
+			return
+		}
+
+		num, err := strconv.Atoi(string(e.Message()[6:]))
+		if err == nil && num >= 1 {
+			randNum := strconv.Itoa(rand.Intn(num))
+			con.Privmsg(channel, e.Nick+" rolled "+randNum+"!")
+			delay = time.Now()
 		}
 	})
 }
@@ -122,19 +127,23 @@ func rollCommand(channel string, con *irc.Connection) {
 func songCommand(channel string, con *irc.Connection) {
 	delay := time.Now()
 	con.AddCallback("PRIVMSG", func(e *irc.Event) {
-		if e.Arguments[0] == channel {
-			if len(e.Message()) == 5 && time.Since(delay).Seconds() > 10 {
-				if e.Message()[0:5] == "!song" {
-					artist, trackName := fm.GetCurrentArtistAndTrackName()
-					if fm.IsNowPlaying() {
-						con.Privmsg(channel, artist+" - "+trackName)
-					} else {
-						lastPlay := fm.GetLastPlayedDate()
-						con.Privmsg(channel, artist+" - "+trackName+". Last played "+lastPlay)
-					}
-					delay = time.Now()
-				}
-			}
+		if !(len(e.Message()) == 5 && time.Since(delay).Seconds() > 10) {
+			return
 		}
+		if e.Message()[0:5] != "!song" {
+			return
+		}
+
+		artist, trackName := fm.GetCurrentArtistAndTrackName()
+		if fm.IsNowPlaying() {
+			con.Privmsg(channel, artist+" - "+trackName)
+		} else {
+			lastPlay, err := fm.GetLastPlayedDate()
+			if err != nil {
+				log.Fatal(err)
+			}
+			con.Privmsg(channel, artist+" - "+trackName+". Last played "+lastPlay)
+		}
+		delay = time.Now()
 	})
 }
