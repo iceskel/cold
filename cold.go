@@ -29,9 +29,11 @@ type configuration struct {
 }
 
 var (
-	config configuration
-	tweet  *anaconda.TwitterApi
-	fm     *lastfm.Lastfm
+	config      configuration
+	tweet       *anaconda.TwitterApi
+	fm          *lastfm.Lastfm
+	timeoutList = make(map[string]bool)
+	opList      = make(map[string]bool)
 )
 
 func main() {
@@ -54,14 +56,14 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
+	opList[config.Channel[1:]] = true // op's for channel, gets op only commands
 	con := irc.IRC(config.Botname, config.Botname)
 	con.Password = config.Aouth
 	if err := con.Connect("irc.twitch.tv:6667"); err != nil {
 		log.Fatal(err)
 	}
-
-	joinChannel(config.Channel, con)
+	channel := config.Channel
+	joinChannel(channel, con)
 	con.Loop()
 }
 
@@ -72,10 +74,12 @@ func joinChannel(channel string, con *irc.Connection) {
 		r, g, b = 216, 52, 52
 		colored := rgbterm.String(channel, r, g, b)
 		log.Print("Joined " + colored)
-		rollCommand(channel, con)
 		songCommand(channel, con)
 		tweetCommand(channel, con)
-		repeatMessenger(channel, con)
+		timeoutCop(channel, 20, con)
+		addTimeoutList(channel, con)
+		rollCommand(channel, con)
+		repeatMessenger(channel, con) // must be last
 	})
 }
 
@@ -83,17 +87,17 @@ func repeatMessenger(channel string, con *irc.Connection) {
 	ticker := time.NewTicker(time.Minute * 5)
 	for {
 		<-ticker.C
-		con.Privmsg(channel, config.RepeatMsg)
+		con.Privmsgf(channel, "► %s", config.RepeatMsg)
 	}
 }
 
 func tweetCommand(channel string, con *irc.Connection) {
 	delay := time.Now()
 	con.AddCallback("PRIVMSG", func(e *irc.Event) {
-		if !(len(e.Message()) == 6 && time.Since(delay).Seconds() > 10) {
+		if !(time.Since(delay).Seconds() > 10) {
 			return
 		}
-		if e.Message()[0:6] != "!tweet" {
+		if e.Message() != "!tweet" && e.Message() != "!twitter" {
 			return
 		}
 
@@ -101,7 +105,8 @@ func tweetCommand(channel string, con *irc.Connection) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		con.Privmsg(channel, thetweet[0].CreatedAt+": \""+thetweet[0].Text+"\"")
+		con.Privmsgf(channel, "► %s: \"%s\"", thetweet[0].CreatedAt, thetweet[0].Text)
+		delay = time.Now()
 	})
 }
 
@@ -117,8 +122,8 @@ func rollCommand(channel string, con *irc.Connection) {
 
 		num, err := strconv.Atoi(string(e.Message()[6:]))
 		if err == nil && num >= 1 {
-			randNum := strconv.Itoa(rand.Intn(num))
-			con.Privmsg(channel, e.Nick+" rolled "+randNum+"!")
+			randNum := rand.Intn(num)
+			con.Privmsgf(channel, "► %s rolled %d!", e.Nick, randNum)
 			delay = time.Now()
 		}
 	})
@@ -127,23 +132,48 @@ func rollCommand(channel string, con *irc.Connection) {
 func songCommand(channel string, con *irc.Connection) {
 	delay := time.Now()
 	con.AddCallback("PRIVMSG", func(e *irc.Event) {
-		if !(len(e.Message()) == 5 && time.Since(delay).Seconds() > 10) {
+		if !(time.Since(delay).Seconds() > 10) {
 			return
 		}
-		if e.Message()[0:5] != "!song" {
+		if e.Message() != "!song" && e.Message() != "!music" {
 			return
 		}
 
 		artist, trackName := fm.GetCurrentArtistAndTrackName()
 		if fm.IsNowPlaying() {
-			con.Privmsg(channel, artist+" - "+trackName)
+			con.Privmsgf(channel, "► %s - %s", artist, trackName)
 		} else {
 			lastPlay, err := fm.GetLastPlayedDate()
 			if err != nil {
 				log.Fatal(err)
 			}
-			con.Privmsg(channel, artist+" - "+trackName+". Last played "+lastPlay)
+			con.Privmsgf(channel, "► %s - %s. Last played %s", artist, trackName, lastPlay)
 		}
 		delay = time.Now()
+	})
+}
+
+func addTimeoutList(channel string, con *irc.Connection) {
+	con.AddCallback("PRIVMSG", func(e *irc.Event) {
+		if !(opList[e.Nick]) {
+			return
+		}
+		if !(len(e.Message()) >= 13) {
+			return
+		}
+		if e.Message()[0:11] != "!addtimeout" {
+			return
+		}
+
+		timeoutList[e.Message()[12:]] = true
+		con.Privmsg(channel, "Timeout word added!")
+	})
+}
+
+func timeoutCop(channel string, length int, con *irc.Connection) {
+	con.AddCallback("PRIVMSG", func(e *irc.Event) {
+		if timeoutList[e.Message()] {
+			con.Privmsgf(channel, "/timeout %s %d", e.Nick, length)
+		}
 	})
 }
