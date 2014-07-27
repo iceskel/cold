@@ -4,13 +4,11 @@ import (
 	"encoding/json"
 	"flag"
 	"github.com/ChimeraCoder/anaconda"
+	irc "github.com/fluffle/goirc/client"
 	"github.com/iceskel/lastfm"
 	"github.com/lxn/win"
-	"github.com/thoj/go-ircevent"
 	"io/ioutil"
 	"log"
-	"math/rand"
-	"strconv"
 	"syscall"
 	"time"
 	"unsafe"
@@ -41,6 +39,8 @@ var (
 	timeoutList = make(map[string]bool)
 	opList      = make(map[string]bool)
 	hwnd        win.HWND
+	delay       = time.Now()
+	total       = 0
 )
 
 func main() {
@@ -66,151 +66,123 @@ func main() {
 	anaconda.SetConsumerKey(config.TwitterConsumerKey)
 	anaconda.SetConsumerSecret(config.TwitterConsumerSecret)
 	tweet = anaconda.NewTwitterApi(config.TwitterAccessToken, config.TwitterAccessSecret)
+
 	opList[config.Channel[1:]] = true // op's for channel, gets op only commands
-	con := irc.IRC(config.Botname, config.Botname)
-	con.Password = config.Aouth
-	if err := con.Connect("irc.twitch.tv:6667"); err != nil {
+
+	c := irc.SimpleClient(config.Botname, config.Botname, "simple bot")
+	c.AddHandler(irc.CONNECTED, func(conn *irc.Conn, line *irc.Line) {
+		conn.Join(config.Channel)
+	})
+	c.AddHandler("PRIVMSG", repeatMessenger)
+	c.AddHandler("PRIVMSG", tweetHandler)
+	c.AddHandler("PRIVMSG", songHandler)
+	c.AddHandler("PRIVMSG", addTimeoutListHandler)
+	c.AddHandler("PRIVMSG", timeoutHandler)
+	c.AddHandler("PRIVMSG", foobar2kHandler)
+
+	quit := make(chan bool)
+	c.AddHandler(irc.DISCONNECTED, func(conn *irc.Conn, line *irc.Line) {
+		quit <- true
+	})
+	if err := c.Connect("irc.twitch.tv", config.Aouth); err != nil {
 		log.Fatal(err)
 	}
-	channel := config.Channel
-	joinChannel(channel, con)
-	con.Loop()
+	log.Printf("Joined %s", config.Channel)
+
+	<-quit
 }
 
-func joinChannel(channel string, con *irc.Connection) {
-	con.AddCallback("001", func(e *irc.Event) {
-		con.Join(channel)
-		log.Printf("Joined %s", channel)
-		songCommand(channel, con)
-		tweetCommand(channel, con)
-		timeoutCop(channel, 20, con)
-		addTimeoutList(channel, con)
-		rollCommand(channel, con)
-		foobar2kCommands(channel, 10, con)
-		repeatMessenger(channel, con) // must be last
-	})
+func repeatMessenger(conn *irc.Conn, line *irc.Line) {
+	ticker := time.NewTicker(5 * time.Minute)
+	go func() {
+		for {
+			<-ticker.C
+			conn.Privmsg(config.Channel, "► "+config.RepeatMsg)
+		}
+	}()
+	time.Sleep(5001 * time.Millisecond)
 }
 
-func repeatMessenger(channel string, con *irc.Connection) {
-	ticker := time.NewTicker(time.Minute * 5)
-	for {
-		<-ticker.C
-		con.Privmsgf(channel, "► %s", config.RepeatMsg)
+func tweetHandler(conn *irc.Conn, line *irc.Line) {
+	if !(time.Since(delay).Seconds() > 10) {
+		return
+	}
+	if line.Args[1] != "!tweet" && line.Args[1] != "!twitter" {
+		return
+	}
+
+	thetweet, err := tweet.GetUserTimeline(nil)
+	if err != nil {
+		conn.Privmsg(config.Channel, "► Tweet command not available, please try later")
+		return
+	}
+	conn.Privmsg(config.Channel, "► "+thetweet[0].CreatedAt+": \""+thetweet[0].Text+"\"")
+	delay = time.Now()
+}
+
+func songHandler(conn *irc.Conn, line *irc.Line) {
+	if !(time.Since(delay).Seconds() > 10) {
+		return
+	}
+	if line.Args[1] != "!song" && line.Args[1] != "!music" {
+		return
+	}
+	fm, err := lastfm.NewLastfm(config.LastfmUser, config.LastfmKey)
+	if err != nil {
+		conn.Privmsg(config.Channel, "► Song command not available, please try later")
+		return
+	}
+	artist, trackName := fm.GetCurrentArtistAndTrackName()
+	if fm.IsNowPlaying() {
+		conn.Privmsg(config.Channel, "► "+artist+" - "+trackName)
+	} else {
+		lastPlay, err := fm.GetLastPlayedDate()
+		if err != nil {
+			conn.Privmsg(config.Channel, "► Song command not available, please try later")
+			return
+		}
+		conn.Privmsg(config.Channel, "► "+artist+" - "+trackName+". Last played "+lastPlay)
+	}
+	delay = time.Now()
+}
+
+func addTimeoutListHandler(conn *irc.Conn, line *irc.Line) {
+	if !(opList[line.Nick]) {
+		return
+	}
+	if !(len(line.Args[1]) >= 13) {
+		return
+	}
+	if line.Args[1][0:11] != "!addtimeout" {
+		return
+	}
+
+	timeoutList[line.Args[1][12:]] = true
+	conn.Privmsg(config.Channel, "Timeout word added!")
+}
+
+func timeoutHandler(conn *irc.Conn, line *irc.Line) {
+	if timeoutList[line.Args[1]] {
+		conn.Privmsg(config.Channel, "/timeout "+line.Nick+" 20")
 	}
 }
 
-func tweetCommand(channel string, con *irc.Connection) {
-	delay := time.Now()
-	con.AddCallback("PRIVMSG", func(e *irc.Event) {
-		if !(time.Since(delay).Seconds() > 10) {
+func foobar2kHandler(conn *irc.Conn, line *irc.Line) {
+	if line.Args[1] == "!music next" || line.Args[1] == "!song next" {
+		total++
+		if !(total >= 5) {
 			return
 		}
-		if e.Message() != "!tweet" && e.Message() != "!twitter" {
+		win.PostMessage(hwnd, win.WM_KEYDOWN, vkX, 1)
+		win.PostMessage(hwnd, win.WM_KEYUP, vkX, 1)
+		total = 0
+	} else if line.Args[1] == "!music random" || line.Args[1] == "!song random" {
+		total++
+		if !(total >= 5) {
 			return
 		}
-
-		thetweet, err := tweet.GetUserTimeline(nil)
-		if err != nil {
-			con.Privmsg(channel, "Tweet command not available, please try later")
-			return
-		}
-		con.Privmsgf(channel, "► %s: \"%s\"", thetweet[0].CreatedAt, thetweet[0].Text)
-		delay = time.Now()
-	})
-}
-
-func rollCommand(channel string, con *irc.Connection) {
-	delay := time.Now()
-	con.AddCallback("PRIVMSG", func(e *irc.Event) {
-		if !(len(e.Message()) >= 5 && time.Since(delay).Seconds() > 10) {
-			return
-		}
-		if e.Message()[0:5] != "!roll" {
-			return
-		}
-
-		num, err := strconv.Atoi(string(e.Message()[6:]))
-		if err == nil && num >= 1 {
-			randNum := rand.Intn(num)
-			con.Privmsgf(channel, "► %s rolled %d!", e.Nick, randNum)
-			delay = time.Now()
-		}
-	})
-}
-
-func songCommand(channel string, con *irc.Connection) {
-	delay := time.Now()
-	con.AddCallback("PRIVMSG", func(e *irc.Event) {
-		if !(time.Since(delay).Seconds() > 10) {
-			return
-		}
-		if e.Message() != "!song" && e.Message() != "!music" {
-			return
-		}
-		fm, err := lastfm.NewLastfm(config.LastfmUser, config.LastfmKey)
-		if err != nil {
-			con.Privmsg(channel, "Song command not available, please try later")
-			return
-		}
-		artist, trackName := fm.GetCurrentArtistAndTrackName()
-		if fm.IsNowPlaying() {
-			con.Privmsgf(channel, "► %s - %s", artist, trackName)
-		} else {
-			lastPlay, err := fm.GetLastPlayedDate()
-			if err != nil {
-				con.Privmsg(channel, "Song command not available, please try later")
-				return
-			}
-			con.Privmsgf(channel, "► %s - %s. Last played %s", artist, trackName, lastPlay)
-		}
-		delay = time.Now()
-	})
-}
-
-func addTimeoutList(channel string, con *irc.Connection) {
-	con.AddCallback("PRIVMSG", func(e *irc.Event) {
-		if !(opList[e.Nick]) {
-			return
-		}
-		if !(len(e.Message()) >= 13) {
-			return
-		}
-		if e.Message()[0:11] != "!addtimeout" {
-			return
-		}
-
-		timeoutList[e.Message()[12:]] = true
-		con.Privmsg(channel, "Timeout word added!")
-	})
-}
-
-func timeoutCop(channel string, length int, con *irc.Connection) {
-	con.AddCallback("PRIVMSG", func(e *irc.Event) {
-		if timeoutList[e.Message()] {
-			con.Privmsgf(channel, "/timeout %s %d", e.Nick, length)
-		}
-	})
-}
-
-func foobar2kCommands(channel string, limit int, con *irc.Connection) {
-	total := 0
-	con.AddCallback("PRIVMSG", func(e *irc.Event) {
-		if e.Message() == "!music next" || e.Message() == "!song next" {
-			total++
-			if !(total >= limit) {
-				return
-			}
-			win.PostMessage(hwnd, win.WM_KEYDOWN, vkX, 1)
-			win.PostMessage(hwnd, win.WM_KEYUP, vkX, 1)
-			total = 0
-		} else if e.Message() == "!music random" || e.Message() == "!song random" {
-			total++
-			if !(total >= limit) {
-				return
-			}
-			win.PostMessage(hwnd, win.WM_KEYDOWN, vkA, 1)
-			win.PostMessage(hwnd, win.WM_KEYUP, vkA, 1)
-			total = 0
-		}
-	})
+		win.PostMessage(hwnd, win.WM_KEYDOWN, vkA, 1)
+		win.PostMessage(hwnd, win.WM_KEYUP, vkA, 1)
+		total = 0
+	}
 }
