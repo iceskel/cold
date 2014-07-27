@@ -23,11 +23,11 @@ format should be as follows
 }
 ```
 ## Commands/Features
-- !song/!music gets the current or last played track of the lastfm user specified in the config file
+- `!song` or `!music` gets the current or last played track of the lastfm user specified in the config file
 - Displays a message every 5 mins to the channel
-- !tweet/!twitter displays your latest tweet
-- !song/!music next or random changes plays the next or random track from your playlist
-- !addtimeout <phrase> adds that certain phrase for the bot to timeout people for 20s
+- `!tweet` or `!twitter` displays your latest tweet
+- `!song next` or `!song random` plays the next or random track from your playlist
+- `!addtimeout <phrase>` adds that certain phrase for the bot to timeout people for 20s
 
 more to come later
 
