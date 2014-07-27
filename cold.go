@@ -47,28 +47,13 @@ func main() {
 	configFile := flag.String("c", "conf.json", "config file")
 	flag.Parse()
 
-	file, err := ioutil.ReadFile(*configFile)
-	if err != nil {
-		log.Fatal(err)
-	}
+	setConfig(configFile)
+	setFoobar2k()
+	setIrcClient()
 
-	if err := json.Unmarshal(file, &config); err != nil {
-		log.Fatal(err)
-	}
+}
 
-	foobar2kwindowclass := syscall.StringToUTF16Ptr("{97E27FAA-C0B3-4b8e-A693-ED7881E99FC1}")
-	foobar2kwindowname := syscall.StringToUTF16Ptr("foobar2000 v1.2.9")
-	hwnd = win.FindWindow(foobar2kwindowclass, foobar2kwindowname)
-	if unsafe.Pointer(hwnd) == nil {
-		log.Fatal("Foobar2k not open or not in default state (press the stop button)")
-	}
-
-	anaconda.SetConsumerKey(config.TwitterConsumerKey)
-	anaconda.SetConsumerSecret(config.TwitterConsumerSecret)
-	tweet = anaconda.NewTwitterApi(config.TwitterAccessToken, config.TwitterAccessSecret)
-
-	opList[config.Channel[1:]] = true // op's for channel, gets op only commands
-
+func setIrcClient() {
 	c := irc.SimpleClient(config.Botname, config.Botname, "simple bot")
 	c.AddHandler(irc.CONNECTED, func(conn *irc.Conn, line *irc.Line) {
 		conn.Join(config.Channel)
@@ -90,6 +75,31 @@ func main() {
 	log.Printf("Joined %s", config.Channel)
 
 	<-quit
+}
+
+func setConfig(configFile *string) {
+	file, err := ioutil.ReadFile(*configFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := json.Unmarshal(file, &config); err != nil {
+		log.Fatal(err)
+	}
+	anaconda.SetConsumerKey(config.TwitterConsumerKey)
+	anaconda.SetConsumerSecret(config.TwitterConsumerSecret)
+	tweet = anaconda.NewTwitterApi(config.TwitterAccessToken, config.TwitterAccessSecret)
+
+	opList[config.Channel[1:]] = true // op's for channel, gets op only commands
+}
+
+func setFoobar2k() {
+	foobar2kwindowclass := syscall.StringToUTF16Ptr("{97E27FAA-C0B3-4b8e-A693-ED7881E99FC1}")
+	foobar2kwindowname := syscall.StringToUTF16Ptr("foobar2000 v1.2.9")
+	hwnd = win.FindWindow(foobar2kwindowclass, foobar2kwindowname)
+	if unsafe.Pointer(hwnd) == nil {
+		log.Fatal("Foobar2k not open or not in default state (press the stop button)")
+	}
 }
 
 func repeatMessenger(conn *irc.Conn, line *irc.Line) {
