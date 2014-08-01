@@ -158,23 +158,3 @@ func timeoutHandler(conn *irc.Conn, line *irc.Line) {
 		conn.Privmsg(config.Channel, "/timeout "+line.Nick+" 20")
 	}
 }
-
-func foobar2kHandler(conn *irc.Conn, line *irc.Line) {
-	if line.Args[1] == "!music next" || line.Args[1] == "!song next" {
-		total++
-		if !(total >= 5) {
-			return
-		}
-		win.PostMessage(hwnd, win.WM_KEYDOWN, vkX, 1)
-		win.PostMessage(hwnd, win.WM_KEYUP, vkX, 1)
-		total = 0
-	} else if line.Args[1] == "!music random" || line.Args[1] == "!song random" {
-		total++
-		if !(total >= 5) {
-			return
-		}
-		win.PostMessage(hwnd, win.WM_KEYDOWN, vkA, 1)
-		win.PostMessage(hwnd, win.WM_KEYUP, vkA, 1)
-		total = 0
-	}
-}
