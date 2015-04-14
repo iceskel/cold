@@ -11,15 +11,16 @@ import (
 )
 
 func main() {
+
 	configFile := flag.String("c", "conf.json", "config file")
 	flag.Parse()
 
-	genericHandler, err := handlers.NewBotHandler(configFile)
+	genericHandler, err := handlers.New(configFile)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	windowsHandler, err := windowsHandlers.NewWindowsBotHandler(configFile)
+	windowsHandler, err := windowsHandlers.New(configFile)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -34,8 +35,9 @@ func initIrcClient(genericHandler *handlers.BotHandler,
 	c.AddHandler(irc.CONNECTED, func(conn *irc.Conn, line *irc.Line) {
 		conn.Join(genericHandler.Config.Channel)
 	})
-	c.AddHandler("PRIVMSG", genericHandler.RepeatMessenger)
 	c.AddHandler("PRIVMSG", genericHandler.TweetHandler)
+	c.AddHandler("PRIVMSG", genericHandler.UpdateChannelGameHandler)
+	c.AddHandler("PRIVMSG", genericHandler.UpdateChannelStatusHandler)
 	c.AddHandler("PRIVMSG", genericHandler.SongHandler)
 	c.AddHandler("PRIVMSG", genericHandler.AddTimeoutListHandler)
 	c.AddHandler("PRIVMSG", genericHandler.TimeoutHandler)
