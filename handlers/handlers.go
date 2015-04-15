@@ -80,7 +80,7 @@ func (bh *BotHandler) UpdateChannelStatusHandler(conn *irc.Conn, line *irc.Line)
 
 	status := line.Args[1][8:]
 	if err := bh.Twitch.UpdateStatus(status); err != nil {
-		conn.Privmsg(bh.Config.Channel, "► Update status command not available, please try later")
+		conn.Privmsg(bh.Config.Channel, "► Update status command not available, please try later.")
 		return
 	}
 	conn.Privmsg(bh.Config.Channel, "► Status changed to "+status)
@@ -104,7 +104,7 @@ func (bh *BotHandler) UpdateChannelGameHandler(conn *irc.Conn, line *irc.Line) {
 
 	game := line.Args[1][6:]
 	if err := bh.Twitch.UpdateGame(game); err != nil {
-		conn.Privmsg(bh.Config.Channel, "► Update game command not available, please try later")
+		conn.Privmsg(bh.Config.Channel, "► Update game command not available, please try later.")
 		return
 	}
 	conn.Privmsg(bh.Config.Channel, "► Game changed to "+game)
@@ -121,11 +121,35 @@ func (bh *BotHandler) TweetHandler(conn *irc.Conn, line *irc.Line) {
 
 	thetweet, err := bh.Tweet.GetUserTimeline(nil)
 	if err != nil {
-		conn.Privmsg(bh.Config.Channel, "► Tweet command not available, please try later")
+		conn.Privmsg(bh.Config.Channel, "► Tweet command not available, please try later.")
 		return
 	}
 	conn.Privmsg(bh.Config.Channel, "► "+thetweet[0].CreatedAt+": \""+thetweet[0].Text+"\"")
 	bh.Delay = time.Now()
+}
+
+func (bh *BotHandler) UptimeHandler(conn *irc.Conn, line *irc.Line) {
+	if !(time.Since(bh.Delay).Seconds() > 10) {
+		return
+	}
+	if line.Args[1] != "!live" && line.Args[1] != "!uptime" {
+		return
+	}
+
+	uptime, err := bh.Twitch.Uptime()
+	if err != nil {
+		conn.Privmsg(bh.Config.Channel, "► Uptime command not available, please try later.")
+		return
+	}
+
+	if uptime == "" {
+		conn.Privmsg(bh.Config.Channel, "► Stream currently offline")
+	} else {
+		conn.Privmsg(bh.Config.Channel, "► Live for "+uptime)
+	}
+
+	bh.Delay = time.Now()
+
 }
 
 func (bh *BotHandler) SongHandler(conn *irc.Conn, line *irc.Line) {
@@ -138,12 +162,12 @@ func (bh *BotHandler) SongHandler(conn *irc.Conn, line *irc.Line) {
 
 	artist, trackName, err := bh.Lastfm.GetCurrentArtistAndTrackName()
 	if err != nil {
-		conn.Privmsg(bh.Config.Channel, "► Song command not available, please try later")
+		conn.Privmsg(bh.Config.Channel, "► Song command not available, please try later.")
 		return
 	}
 	nwplay, err := bh.Lastfm.IsNowPlaying()
 	if err != nil {
-		conn.Privmsg(bh.Config.Channel, "► Song command not available, please try later")
+		conn.Privmsg(bh.Config.Channel, "► Song command not available, please try later.")
 		return
 	}
 

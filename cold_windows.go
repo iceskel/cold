@@ -36,6 +36,7 @@ func initIrcClient(genericHandler *handlers.BotHandler,
 		conn.Join(genericHandler.Config.Channel)
 	})
 	c.AddHandler("PRIVMSG", genericHandler.TweetHandler)
+	c.AddHandler("PRIVMSG", genericHandler.UptimeHandler)
 	c.AddHandler("PRIVMSG", genericHandler.UpdateChannelGameHandler)
 	c.AddHandler("PRIVMSG", genericHandler.UpdateChannelStatusHandler)
 	c.AddHandler("PRIVMSG", genericHandler.SongHandler)
