@@ -15,43 +15,46 @@ func main() {
 	configFile := flag.String("c", "conf.json", "config file")
 	flag.Parse()
 
-	genericHandler, err := handlers.New(configFile)
+	genericPluginHandler, err := handlers.New(configFile)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	windowsHandler, err := windowsHandlers.New(configFile)
+	windowsPluginHandler, err := windowsHandlers.New(configFile)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	initIrcClient(genericHandler, windowsHandler)
+	initIrcClient(genericPluginHandler, windowsPluginHandler)
 
 }
 
-func initIrcClient(genericHandler *handlers.BotHandler,
-	windowsHandler *windowsHandlers.WindowsBotHandler) {
-	c := irc.SimpleClient(genericHandler.Config.Botname, genericHandler.Config.Botname, "simple bot")
+func initIrcClient(genericPluginHandler *handlers.BotHandler,
+	windowsPluginHandler *windowsHandlers.WindowsBotHandler) {
+	c := irc.SimpleClient(genericPluginHandler.Config.Botname, genericPluginHandler.Config.Botname, "simple bot")
 	c.AddHandler(irc.CONNECTED, func(conn *irc.Conn, line *irc.Line) {
-		conn.Join(genericHandler.Config.Channel)
+		conn.Join(genericPluginHandler.Config.Channel)
 	})
-	c.AddHandler("PRIVMSG", genericHandler.TweetHandler)
-	c.AddHandler("PRIVMSG", genericHandler.UptimeHandler)
-	c.AddHandler("PRIVMSG", genericHandler.UpdateChannelGameHandler)
-	c.AddHandler("PRIVMSG", genericHandler.UpdateChannelStatusHandler)
-	c.AddHandler("PRIVMSG", genericHandler.SongHandler)
-	c.AddHandler("PRIVMSG", genericHandler.AddTimeoutListHandler)
-	c.AddHandler("PRIVMSG", genericHandler.TimeoutHandler)
-	c.AddHandler("PRIVMSG", windowsHandler.Foobar2kHandler)
+	c.AddHandler("PRIVMSG", genericPluginHandler.TweetHandler)
+	c.AddHandler("PRIVMSG", genericPluginHandler.ListCommandsHandler)
+	c.AddHandler("PRIVMSG", genericPluginHandler.AddCommandHandler)
+	c.AddHandler("PRIVMSG", genericPluginHandler.CommandHandler)
+	c.AddHandler("PRIVMSG", genericPluginHandler.UptimeHandler)
+	c.AddHandler("PRIVMSG", genericPluginHandler.UpdateChannelGameHandler)
+	c.AddHandler("PRIVMSG", genericPluginHandler.UpdateChannelStatusHandler)
+	c.AddHandler("PRIVMSG", genericPluginHandler.SongHandler)
+	c.AddHandler("PRIVMSG", genericPluginHandler.AddTimeoutListHandler)
+	c.AddHandler("PRIVMSG", genericPluginHandler.TimeoutHandler)
+	c.AddHandler("PRIVMSG", windowsPluginHandler.Foobar2kHandler)
 
 	quit := make(chan bool)
 	c.AddHandler(irc.DISCONNECTED, func(conn *irc.Conn, line *irc.Line) {
 		quit <- true
 	})
-	if err := c.Connect("irc.twitch.tv", genericHandler.Config.Aouth); err != nil {
+	if err := c.Connect("irc.twitch.tv", genericPluginHandler.Config.Aouth); err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("Joined %s", genericHandler.Config.Channel)
+	log.Printf("Joined %s", genericPluginHandler.Config.Channel)
 
 	<-quit
 }

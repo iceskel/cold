@@ -13,36 +13,39 @@ func main() {
 	configFile := flag.String("c", "conf.json", "config file")
 	flag.Parse()
 
-	genericHandler, err := handlers.New(configFile)
+	pluginHandler, err := handlers.New(configFile)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	initIrcClient(genericHandler)
+	initIrcClient(pluginHandler)
 
 }
 
-func initIrcClient(genericHandler *handlers.BotHandler) {
-	c := irc.SimpleClient(genericHandler.Config.Botname, genericHandler.Config.Botname, "simple bot")
+func initIrcClient(pluginHandler *handlers.BotHandler) {
+	c := irc.SimpleClient(pluginHandler.Config.Botname, pluginHandler.Config.Botname, "simple bot")
 	c.AddHandler(irc.CONNECTED, func(conn *irc.Conn, line *irc.Line) {
-		conn.Join(genericHandler.Config.Channel)
+		conn.Join(pluginHandler.Config.Channel)
 	})
-	c.AddHandler("PRIVMSG", genericHandler.TweetHandler)
-	c.AddHandler("PRIVMSG", genericHandler.UptimeHandler)
-	c.AddHandler("PRIVMSG", genericHandler.UpdateChannelGameHandler)
-	c.AddHandler("PRIVMSG", genericHandler.UpdateChannelStatusHandler)
-	c.AddHandler("PRIVMSG", genericHandler.SongHandler)
-	c.AddHandler("PRIVMSG", genericHandler.AddTimeoutListHandler)
-	c.AddHandler("PRIVMSG", genericHandler.TimeoutHandler)
+	c.AddHandler("PRIVMSG", pluginHandler.TweetHandler)
+	c.AddHandler("PRIVMSG", pluginHandler.ListCommandsHandler)
+	c.AddHandler("PRIVMSG", pluginHandler.AddCommandHandler)
+	c.AddHandler("PRIVMSG", pluginHandler.CommandHandler)
+	c.AddHandler("PRIVMSG", pluginHandler.UptimeHandler)
+	c.AddHandler("PRIVMSG", pluginHandler.UpdateChannelGameHandler)
+	c.AddHandler("PRIVMSG", pluginHandler.UpdateChannelStatusHandler)
+	c.AddHandler("PRIVMSG", pluginHandler.SongHandler)
+	c.AddHandler("PRIVMSG", pluginHandler.AddTimeoutListHandler)
+	c.AddHandler("PRIVMSG", pluginHandler.TimeoutHandler)
 
 	quit := make(chan bool)
 	c.AddHandler(irc.DISCONNECTED, func(conn *irc.Conn, line *irc.Line) {
 		quit <- true
 	})
-	if err := c.Connect("irc.twitch.tv", genericHandler.Config.Aouth); err != nil {
+	if err := c.Connect("irc.twitch.tv", pluginHandler.Config.Aouth); err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("Joined %s", genericHandler.Config.Channel)
+	log.Printf("Joined %s", pluginHandler.Config.Channel)
 
 	<-quit
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/iceskel/lastfm"
 	"github.com/iceskel/twitch"
 	"io/ioutil"
+	"strings"
 	"time"
 )
 
@@ -26,8 +27,16 @@ type Configuration struct {
 	TwitterAccessSecret   string
 }
 
+type CommandMessage struct {
+	Commands []struct {
+		Command string `json:"Command"`
+		Message string `json:"Message"`
+	} `json:"Commands"`
+}
+
 type BotHandler struct {
 	Config      Configuration
+	Commands    map[string]string
 	Tweet       *anaconda.TwitterApi
 	Twitch      *twitch.TwitchApi
 	Lastfm      *lastfm.LastfmApi
@@ -39,6 +48,9 @@ type BotHandler struct {
 // New returns a new BotHandler instance
 func New(configFile *string) (*BotHandler, error) {
 	var config Configuration
+	var cmd CommandMessage
+	commands := make(map[string]string)
+
 	file, err := ioutil.ReadFile(*configFile)
 	if err != nil {
 		return nil, err
@@ -48,6 +60,19 @@ func New(configFile *string) (*BotHandler, error) {
 		return nil, err
 	}
 
+	file, err = ioutil.ReadFile("commands.json")
+	if err != nil {
+		return nil, err
+	}
+
+	if err := json.Unmarshal(file, &cmd); err != nil {
+		return nil, err
+	}
+
+	for _, val := range cmd.Commands {
+		commands[val.Command] = val.Message
+	}
+
 	anaconda.SetConsumerKey(config.TwitterConsumerKey)
 	anaconda.SetConsumerSecret(config.TwitterConsumerSecret)
 	op := make(map[string]bool)
@@ -55,6 +80,7 @@ func New(configFile *string) (*BotHandler, error) {
 
 	return &BotHandler{
 		Config:      config,
+		Commands:    commands,
 		Tweet:       anaconda.NewTwitterApi(config.TwitterAccessToken, config.TwitterAccessSecret),
 		Twitch:      twitch.New(config.Channel[1:], config.ChannelAouth),
 		Lastfm:      lastfm.New(config.LastfmUser, config.LastfmKey),
@@ -62,6 +88,59 @@ func New(configFile *string) (*BotHandler, error) {
 		OpList:      op,
 		Delay:       time.Now(),
 	}, nil
+}
+
+func (bh *BotHandler) AddCommandHandler(conn *irc.Conn, line *irc.Line) {
+	if !(bh.OpList[line.Nick]) {
+		return
+	}
+	if !(time.Since(bh.Delay).Seconds() > 10) {
+		return
+	}
+
+	newcom := strings.Fields(line.Args[1])
+	if len(newcom) < 3 {
+		return
+	}
+	if newcom[0] != "!addcom" {
+		return
+	}
+	var msg string
+	for _, val := range newcom[2:] {
+		msg += " " + val
+	}
+	bh.CommandMsg[newcom[1]] = msg
+
+	conn.Privmsg(bh.Config.Channel, "► New command "+newcom[1]+" added!")
+
+	bh.Delay = time.Now()
+}
+
+func (bh *BotHandler) CommandHandler(conn *irc.Conn, line *irc.Line) {
+	if !(time.Since(bh.Delay).Seconds() > 10) {
+		return
+	}
+
+	if val, ok := bh.CommandMsg[line.Args[1]]; ok {
+		conn.Privmsg(bh.Config.Channel, "► "+val)
+		bh.Delay = time.Now()
+	}
+}
+
+func (bh *BotHandler) ListCommandsHandler(conn *irc.Conn, line *irc.Line) {
+	if !(time.Since(bh.Delay).Seconds() > 10) {
+		return
+	}
+	if line.Args[1] != "!commands" && line.Args[1] != "!cmd" && line.Args[1] != "!command" {
+		return
+	}
+
+	var cmds string
+	for i := range bh.CommandMsg {
+		cmds += " " + i
+	}
+	conn.Privmsg(bh.Config.Channel, "► Command list: "+cmds)
+	bh.Delay = time.Now()
 }
 
 func (bh *BotHandler) UpdateChannelStatusHandler(conn *irc.Conn, line *irc.Line) {
