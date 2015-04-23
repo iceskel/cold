@@ -31,6 +31,7 @@ format should be as follows
 - `!delcmd <cmd>` deletes a custom command
 - `!game <game>` updates your twitch channel game currently played
 - `!status <status>` updates your twitch channel status
+- `!cmd` or `!commands` or `!command` lists the available commands available to the non-OP user
 
 
 more to come later

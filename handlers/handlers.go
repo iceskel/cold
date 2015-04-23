@@ -194,6 +194,7 @@ func (bh *BotHandler) ListCommandsHandler(conn *irc.Conn, line *irc.Line) {
 	for key := range bh.CommandsMap {
 		cmds += " " + key
 	}
+	cmds += " !tweet !song !commands"
 	conn.Privmsg(bh.Config.Channel, "► Command list: "+cmds)
 	bh.Delay = time.Now()
 }
