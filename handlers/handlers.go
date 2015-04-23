@@ -20,7 +20,6 @@ type Configuration struct {
 	LastfmKey             string
 	LastfmSecret          string
 	LastfmUser            string
-	RepeatMsg             string
 	TwitterConsumerKey    string
 	TwitterConsumerSecret string
 	TwitterAccessToken    string

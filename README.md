@@ -10,12 +10,12 @@ format should be as follows
 ```
 {
 	"Channel": "#foo",
+	"ChannelAouth": "QfOChVxhDyxBS8uh0QK2ylHA5",
 	"Botname": "robit",
 	"Aouth": "oauth:32433ASDasd3easd3easdas2",
 	"LastfmKey": "aq3asdasASDd213asdasdad",
 	"LastfmSecret": "asdas3ASDzsdcz23rzdf",
 	"LastfmUser": "bar",
-	"RepeatMsg": "Don't forget to follow <twitter>, <facebook> etc",
 	"TwitterConsumerKey": "QfOChVxhDyxBS8uh0QK2ylHA5",
 	"TwitterConsumerSecret": "E9lTUrM09UwQUN9HN667LHAYTWHR04kCH8MEbDzHSqFSe0I8so",
 	"TwitterAccessToken": "2435571859-fiPracoyGwTtypIrEKxPZ035lzwf3cLB3QSy8NI",
@@ -24,10 +24,14 @@ format should be as follows
 ```
 ## Commands/Features
 - `!song` or `!music` gets the current or last played track of the lastfm user specified in the config file
-- Displays a message every 5 mins to the channel
 - `!tweet` or `!twitter` displays your latest tweet
-- `!song next` or `!song random` plays the next or random track from your playlist
+- `!song next` or `!song random` plays the next or random track from your playlist (foobar2k only)
 - `!addtimeout <phrase>` adds that certain phrase for the bot to timeout people for 20s
+- `!addcmd <cmd> <msg>` adds a custom command
+- `!delcmd <cmd>` deletes a custom command
+- `!game <game>` updates your twitch channel game currently played
+- `!status <status>` updates your twitch channel status
+
 
 more to come later
 
@@ -45,6 +49,11 @@ Then after creating the application, get the api keys.
 For the !song random command, foobar2k music player is required and two keyboard shortcuts need to be set. "A" key for Action "Playback / Next" and "B" key for Action "Playback / Random". This can be edited easily to whatever you wish, just need to have a look at http://msdn.microsoft.com/en-us/library/windows/desktop/dd375731%28v=vs.85%29.aspx and change the corresponding values in the constants. 
 
 
+For the `!game` and `!status` commands, you need to register this application to your channel account to use the Twitch API. To do this follow the instructiosn here
+https://github.com/justintv/Twitch-API/blob/master/authentication.md
+You then just add the access token to the "ChannelAouth" field of the configuration file. 
+
+
 ## Installing
 Just `go get github.com/iceskel/cold` and cd to the directory and `go build cold.go`
-next run it `./cold.exe -c configfile.json`. 
+next run it `./cold.exe -c configfile.json`.
