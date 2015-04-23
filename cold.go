@@ -30,6 +30,7 @@ func initIrcClient(pluginHandler *handlers.BotHandler) {
 	c.AddHandler("PRIVMSG", pluginHandler.TweetHandler)
 	c.AddHandler("PRIVMSG", pluginHandler.ListCommandsHandler)
 	c.AddHandler("PRIVMSG", pluginHandler.AddCommandHandler)
+	c.AddHandler("PRIVMSG", pluginHandler.DeleteCommandHandler)
 	c.AddHandler("PRIVMSG", pluginHandler.CommandHandler)
 	c.AddHandler("PRIVMSG", pluginHandler.UptimeHandler)
 	c.AddHandler("PRIVMSG", pluginHandler.UpdateChannelGameHandler)
