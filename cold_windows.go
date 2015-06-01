@@ -32,27 +32,27 @@ func main() {
 func initIrcClient(genericPluginHandler *handlers.BotHandler,
 	windowsPluginHandler *windowsHandlers.WindowsBotHandler) {
 	c := irc.SimpleClient(genericPluginHandler.Config.Botname, genericPluginHandler.Config.Botname, "simple bot")
-	c.AddHandler(irc.CONNECTED, func(conn *irc.Conn, line *irc.Line) {
+	c.HandleFunc(irc.CONNECTED, func(conn *irc.Conn, line *irc.Line) {
 		conn.Join(genericPluginHandler.Config.Channel)
 	})
-	c.AddHandler("PRIVMSG", genericPluginHandler.TweetHandler)
-	c.AddHandler("PRIVMSG", genericPluginHandler.ListCommandsHandler)
-	c.AddHandler("PRIVMSG", genericPluginHandler.AddCommandHandler)
-	c.AddHandler("PRIVMSG", genericPluginHandler.DeleteCommandHandler)
-	c.AddHandler("PRIVMSG", genericPluginHandler.CommandHandler)
-	c.AddHandler("PRIVMSG", genericPluginHandler.UptimeHandler)
-	c.AddHandler("PRIVMSG", genericPluginHandler.UpdateChannelGameHandler)
-	c.AddHandler("PRIVMSG", genericPluginHandler.UpdateChannelStatusHandler)
-	c.AddHandler("PRIVMSG", genericPluginHandler.SongHandler)
-	c.AddHandler("PRIVMSG", genericPluginHandler.AddTimeoutListHandler)
-	c.AddHandler("PRIVMSG", genericPluginHandler.TimeoutHandler)
-	c.AddHandler("PRIVMSG", windowsPluginHandler.Foobar2kHandler)
+	c.HandleFunc("PRIVMSG", genericPluginHandler.TweetHandler)
+	c.HandleFunc("PRIVMSG", genericPluginHandler.ListCommandsHandler)
+	c.HandleFunc("PRIVMSG", genericPluginHandler.AddCommandHandler)
+	c.HandleFunc("PRIVMSG", genericPluginHandler.DeleteCommandHandler)
+	c.HandleFunc("PRIVMSG", genericPluginHandler.CommandHandler)
+	c.HandleFunc("PRIVMSG", genericPluginHandler.UptimeHandler)
+	c.HandleFunc("PRIVMSG", genericPluginHandler.UpdateChannelGameHandler)
+	c.HandleFunc("PRIVMSG", genericPluginHandler.UpdateChannelStatusHandler)
+	c.HandleFunc("PRIVMSG", genericPluginHandler.SongHandler)
+	c.HandleFunc("PRIVMSG", genericPluginHandler.AddTimeoutListHandler)
+	c.HandleFunc("PRIVMSG", genericPluginHandler.TimeoutHandler)
+	c.HandleFunc("PRIVMSG", windowsPluginHandler.Foobar2kHandler)
 
 	quit := make(chan bool)
-	c.AddHandler(irc.DISCONNECTED, func(conn *irc.Conn, line *irc.Line) {
+	c.HandleFunc(irc.DISCONNECTED, func(conn *irc.Conn, line *irc.Line) {
 		quit <- true
 	})
-	if err := c.Connect("irc.twitch.tv", genericPluginHandler.Config.Aouth); err != nil {
+	if err := c.ConnectTo("irc.twitch.tv", genericPluginHandler.Config.Aouth); err != nil {
 		log.Fatal(err)
 	}
 	log.Printf("Joined %s", genericPluginHandler.Config.Channel)
